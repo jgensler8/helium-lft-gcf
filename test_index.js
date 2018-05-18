@@ -12,7 +12,19 @@ function fake_packet(){
 
 function fake_event() {
   return {
-    "data": "1,2,3,hello"
+    "eventId": "",
+    "timestamp": "",
+    "eventType": "",
+    "resource": "",
+    "data": fake_event_data()
+  };
+};
+
+function fake_event_data() {
+  return {
+    "@type": "",
+    "attributes": [],
+    "data": "MSwyLDMsaGVsbG8="
   };
 };
 
@@ -67,10 +79,10 @@ describe('heliumlft', function() {
     })
   });
   
-  describe('#getPacketFromEvent', function(){
+  describe('#getPacketFromEventData', function(){
     it('should return the fake packet data', function() {
-      event = fake_event();
-      packet = index.getPacketFromEvent(event);
+      eventData = fake_event_data();
+      packet = index.getPacketFromEventData(eventData);
       correct_packet = fake_packet();
       assert.equal(packet["transaction_id"], correct_packet["transaction_id"]);
       assert.equal(packet["packet_index"], correct_packet["packet_index"]);
@@ -79,21 +91,21 @@ describe('heliumlft', function() {
     })
   })
   
-  describe('#getKeyFromEvent', function() {
+  describe('#getKeyFromEventData', function() {
     it('should return the key for a new PubSub Event', function() {
-      event = fake_event();
+      eventData = fake_event_data();
       datastore = fake_datastore();
-      key = index.getKeyFromEvent(datastore, event);
+      key = index.getKeyFromEventData(datastore, eventData);
       assert(key, "1-2")
     });
   });
   
-  describe('#storeEvent', function() {
+  describe('#storeEventData', function() {
     it('should return the same data when we call get', function() {
-      event = fake_event();
+      eventData = fake_event_data();
       datastore = fake_datastore();
-      index.storePacket(datastore, event);
-      packet = datastore.get(index.getKeyFromEvent(datastore, event));
+      index.storePacket(datastore, eventData);
+      packet = datastore.get(index.getKeyFromEventData(datastore, eventData));
       assert.equal(packet["transaction_id"], 1);
     })
   });

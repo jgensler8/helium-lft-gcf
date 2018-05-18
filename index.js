@@ -1,7 +1,8 @@
 const Datastore = require('@google-cloud/datastore');
 const datastore = new Datastore();
+const buffer = require('buffer');
 
-const key_prefix = "lft";
+const kind = "lft-event";
 
 exports.newPacket = function(transaction_id, packet_index, total_number_of_packets, data) {
   return {
@@ -17,19 +18,20 @@ exports.parsePacket = function(packetString) {
   return exports.newPacket(packetParts[0], packetParts[1], packetParts[2], packetParts[3]);
 }
 
-exports.getKeyFromEvent = function(datastore, event) {
-  packet = exports.parsePacket(event["data"]);
-  return datastore.key([key_prefix, packet["transaction_id"], packet["packet_index"] ])
+exports.getKeyFromEventData = function(datastore, eventData) {
+  packet = exports.parsePacket(eventData["data"]);
+  return datastore.key([kind, packet["transaction_id"] + packet["packet_index"] ])
 }
 
-exports.getPacketFromEvent = function(event) {
-  return exports.parsePacket(event["data"]);
+exports.getPacketFromEventData = function(eventData) {
+  var b = new buffer.Buffer(eventData["data"], 'base64');
+  return exports.parsePacket(b.toString('ascii'));
 }
 
-exports.storePacket = function(datastore, event, callback) {
+exports.storePacket = function(datastore, eventData, callback) {
   const entity = {
-    key: exports.getKeyFromEvent(datastore, event),
-    data: exports.getPacketFromEvent(event)
+    key: exports.getKeyFromEventData(datastore, eventData),
+    data: exports.getPacketFromEventData(eventData)
   };
 
   datastore.save(
@@ -41,7 +43,7 @@ exports.storePacket = function(datastore, event, callback) {
 }
 
 exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback) {
-  const query = datastore.createQuery(key_prefix);
+  const query = datastore.createQuery(kind);
   query.filter('transaction_id', transaction_id);
   query.order('packet_index');
   datastore.runQuery(query, function(err, entities) {
@@ -68,6 +70,13 @@ exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback
  * @param {function} callback The callback function.
  */
 exports.heliumlft = (event, callback) => {
-  console.log(event);
-  callback(null, `Hello ${event.data.name || 'World'}!`);
+  eventData = event["data"];
+  console.log("EventData", eventData);
+  
+  exports.storePacket(datastore, eventData, function(err) {
+    if(err != null) {
+      console.log("Error storing Packet", err)
+    }
+    callback(err)
+  })
 };

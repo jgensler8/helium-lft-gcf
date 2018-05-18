@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha ./test_index.js",
-    "test_function": "functions call heliumlft --data='{\"data\": \"1,1,1,world\"}'",
-    "deploy": "functions deploy heliumlft --event-type cloud.pubsub"
+    "test_function": "functions call heliumlft --data='1,1,1,world'",
+    "deploy": "functions deploy heliumlft --event-type cloud.pubsub",
+    "production": "gcloud functions deploy heliumlft --trigger-topic mushroombot --entry-point heliumlft --stage-bucket vo-fx",
+    "production_message": "gcloud alpha pubsub topics publish mushroombot --message='1,2,3,world'"
   },
   "author": "",
   "license": "ISC",
