@@ -1,0 +1,6 @@
+indexes:
+- kind: lft-event
+  properties:
+  - name: transaction_id
+  - name: packet_index
+    direction: asc

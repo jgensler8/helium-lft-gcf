@@ -28,6 +28,11 @@ exports.getPacketFromEventData = function(eventData) {
   return exports.parsePacket(b.toString('ascii'));
 }
 
+exports.getTransactionIdFromEventData = function(eventData) {
+    var b = new buffer.Buffer(eventData["data"], 'base64');
+    return b.toString('ascii');
+}
+
 exports.storePacket = function(datastore, eventData, callback) {
   const entity = {
     key: exports.getKeyFromEventData(datastore, eventData),
@@ -43,23 +48,23 @@ exports.storePacket = function(datastore, eventData, callback) {
 }
 
 exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback) {
-  const query = datastore.createQuery(kind);
-  query.filter('transaction_id', transaction_id);
-  query.order('packet_index');
-  datastore.runQuery(query, function(err, entities) {
-    if(err != null) {
-      return callback(err);
-    }
-    
+  const query = datastore
+    .createQuery(kind)
+    .filter('transaction_id', '=', transaction_id)
+    .order('packet_index', {
+      ascending: true,
+    });
+  datastore.runQuery(query).then(entities => {
     blob = "";
     
-    entities.forEach(function(entity) {
-      record = entity[datastore.DATA];
-      data = record["data"];
-      blob += data;
+    entities[0].forEach(function(entity) {
+      blob += entity["data"];
     })
     
-    callback(err, blob);
+    callback(null, blob);
+  }).catch(err => {
+    console.log(err)
+    callback(err)
   });
 }
 
@@ -69,7 +74,7 @@ exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback
  * @param {object} event The Cloud Functions event.
  * @param {function} callback The callback function.
  */
-exports.heliumlft = (event, callback) => {
+exports.heliumlft_upload = (event, callback) => {
   eventData = event["data"];
   console.log("EventData", eventData);
   
@@ -80,3 +85,18 @@ exports.heliumlft = (event, callback) => {
     callback(err)
   })
 };
+
+exports.heliumlft_assemble = (event, callback) => {
+  eventData = event["data"];
+  console.log("EventData", eventData);
+  
+  transaction_id = exports.getTransactionIdFromEventData(eventData);
+  console.log("transaction_id", transaction_id);
+  
+  exports.assembleBlobFromDatastore(datastore, transaction_id, function(err, blob){
+    if(err == null) {
+      console.log(blob)
+    }
+    callback(err);
+  });
+}

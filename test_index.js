@@ -42,14 +42,13 @@ function fake_datastore() {
       return list.join("-");
     },
     createQuery: function() {
-      return {
-        filter: function() {
-          return null;
-        },
-        order: function() {
-          return null;
-        }
-      };
+      return this;
+    },
+    filter: function() {
+      return this;
+    },
+    order: function() {
+      return this;
     }
   }
 }
@@ -113,8 +112,10 @@ describe('heliumlft', function() {
   describe('#assembleBlobFromDatastore', function() {
     it('should create a whole piece of data from multiple obejcts', function() {
       datastore = fake_datastore();
-      datastore.runQuery = function(query, callback) {
-        callback(null, [{"data": {"data": "hello "}}, {"data": {"data": "world"}}])
+      datastore.runQuery = function(query) {
+        return new Promise(function(resolve, reject) {
+          resolve([[{"data": "hello "}, {"data": "world"}], {"moreResults": "", "endCursor": ""}]);
+        })
       };
       
       index.assembleBlobFromDatastore(datastore, "bogus", function(err, message){

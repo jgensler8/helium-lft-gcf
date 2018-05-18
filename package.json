@@ -5,10 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha ./test_index.js",
-    "test_function": "functions call heliumlft --data='1,1,1,world'",
-    "deploy": "functions deploy heliumlft --event-type cloud.pubsub",
-    "production": "gcloud functions deploy heliumlft --trigger-topic mushroombot --entry-point heliumlft --stage-bucket vo-fx",
-    "production_message": "gcloud alpha pubsub topics publish mushroombot --message='1,2,3,world'"
+    "test_function": "functions call heliumlft-upload --data='1,1,1,world'",
+    "deploy": "functions deploy heliumlft-upload --event-type cloud.pubsub",
+    "production_upload": "gcloud functions deploy heliumlft-upload --trigger-topic heliumlft-upload --entry-point heliumlft_upload --stage-bucket vo-fx",
+    "production_upload_message_1": "gcloud alpha pubsub topics publish heliumlft-upload --message='1,1,2,hello '",
+    "production_upload_message_2": "gcloud alpha pubsub topics publish heliumlft-upload --message='1,2,2,world'",
+    "production_index": "gcloud datastore create-indexes index.yaml",
+    "production_assemble": "gcloud functions deploy heliumlft-assemble --trigger-topic heliumlft-assemble --entry-point heliumlft_assemble --stage-bucket vo-fx",
+    "production_assemble_message": "gcloud alpha pubsub topics publish heliumlft-assemble --message='1'"
   },
   "author": "",
   "license": "ISC",
