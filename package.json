@@ -12,10 +12,16 @@
     "production_upload_message_2": "gcloud alpha pubsub topics publish heliumlft-upload --message='1,2,2,world'",
     "production_index": "gcloud datastore create-indexes index.yaml",
     "production_assemble": "gcloud functions deploy heliumlft-assemble --trigger-topic heliumlft-assemble --entry-point heliumlft_assemble --stage-bucket vo-fx",
-    "production_assemble_message": "gcloud alpha pubsub topics publish heliumlft-assemble --message='1'"
+    "production_assemble_message": "gcloud alpha pubsub topics publish heliumlft-assemble --message='1'",
+    "production_gae": "gcloud app deploy ./app.yaml",
+    "start": "node cron.js",
+    "production_cron": "gcloud app deploy ./cron.yaml"
   },
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=6.0.0 <7.0.0"
+  },
   "dependencies": {
     "@google-cloud/datastore": "^1.4.0",
     "@google-cloud/storage": "^1.6.0"
