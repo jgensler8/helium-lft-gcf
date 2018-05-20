@@ -1,12 +1,16 @@
 const Datastore = require('@google-cloud/datastore');
-const datastore = new Datastore();
+const Storage = require('@google-cloud/storage');
 const buffer = require('buffer');
 
 const kind = "lft-event";
 
+const datastore = new Datastore();
+
+const gcs_bucket = Storage().bucket('mushroom-images');
+
 exports.newPacket = function(transaction_id, packet_index, total_number_of_packets, data) {
   return {
-    "transaction_id": transaction_id,
+    "transaction_id": '' + transaction_id,
     "packet_index": packet_index,
     "total_number_of_packets": total_number_of_packets,
     "data": data
@@ -14,13 +18,25 @@ exports.newPacket = function(transaction_id, packet_index, total_number_of_packe
 }
 
 exports.parsePacket = function(packetString) {
-  packetParts = packetString.split(",");
-  return exports.newPacket(packetParts[0], packetParts[1], packetParts[2], packetParts[3]);
+  transaction_id_index = packetString.indexOf(",");
+  transaction_id = packetString.substring(0, transaction_id_index);
+  packetString = packetString.substring(transaction_id_index + 1)
+  
+  packet_index_index = packetString.indexOf(",");
+  packet_index = parseInt(packetString.substring(0, packet_index_index));
+  packetString = packetString.substring(packet_index_index + 1);
+  
+  total_number_of_packets_index = packetString.indexOf(",");
+  total_number_of_packets = parseInt(packetString.substring(0, total_number_of_packets_index));
+  data = packetString.substring(total_number_of_packets_index + 1);
+  
+  return exports.newPacket(transaction_id, packet_index, total_number_of_packets, data);
 }
 
 exports.getKeyFromEventData = function(datastore, eventData) {
-  packet = exports.parsePacket(eventData["data"]);
-  return datastore.key([kind, packet["transaction_id"] + packet["packet_index"] ])
+  var b = new buffer.Buffer(eventData["data"], 'base64');
+  packet = exports.parsePacket(b.toString('ascii'));
+  return datastore.key([kind, packet["transaction_id"] + "-" + packet["packet_index"] ])
 }
 
 exports.getPacketFromEventData = function(eventData) {
@@ -30,7 +46,7 @@ exports.getPacketFromEventData = function(eventData) {
 
 exports.getTransactionIdFromEventData = function(eventData) {
     var b = new buffer.Buffer(eventData["data"], 'base64');
-    return b.toString('ascii');
+    return parseInt(b.toString('ascii'));
 }
 
 exports.storePacket = function(datastore, eventData, callback) {
@@ -58,8 +74,16 @@ exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback
     blob = "";
     
     entities[0].forEach(function(entity) {
-      blob += entity["data"];
+      console.log("Packet Index:", entity["packet_index"]);
+      entity_data = entity["data"];
+      // remove trailing null terminator
+      entity_data = entity_data.substring(0, entity_data.length - 1);
+      entity_data = new buffer.Buffer(entity_data, 'base64');
+      entity_data = entity_data.toString('hex');
+      blob += entity_data;
     })
+    
+    blob = new buffer.Buffer(blob, 'hex');
     
     callback(null, blob);
   }).catch(err => {
@@ -95,7 +119,7 @@ exports.heliumlft_assemble = (event, callback) => {
   
   exports.assembleBlobFromDatastore(datastore, transaction_id, function(err, blob){
     if(err == null) {
-      console.log(blob)
+      gcs_bucket.file("" + transaction_id + ".jpeg").save(blob);
     }
     callback(err);
   });

@@ -10,6 +10,10 @@ function cron_take_picture() {
 };
 
 const requestHandler = (request, response) => {
+  if(request.headers['X-Appengine-Cron'] == null) {
+    return response.end(JSON.stringify({"error": "unsupported"}));
+  }
+  
   console.log(request.url)
   if(request.url.startsWith('/cron/assemble')) {
     cron_assemble();

@@ -1,12 +1,13 @@
 var assert = require('chai').assert;
 var index = require('./index');
+var buffer = require('buffer');
 
 function fake_packet(){
   return {
     "transaction_id": 1,
     "packet_index": 2,
     "total_number_of_packets": 3,
-    "data": "hello"
+    "data": "aGVsbG8=\n"
   };
 };
 
@@ -24,7 +25,7 @@ function fake_event_data() {
   return {
     "@type": "",
     "attributes": [],
-    "data": "MSwyLDMsaGVsbG8="
+    "data": "MSwyLDMsYUdWc2JHOD0K"
   };
 };
 
@@ -60,21 +61,21 @@ describe('heliumlft', function() {
       packet = index.newPacket(1,1,1,"data");
       assert.isObject(packet);
       assert.hasAllKeys(packet, ["transaction_id", "packet_index", "total_number_of_packets", "data"]);
-      assert.isNumber(packet["transaction_id"]);
-      assert.isNumber(packet["packet_index"]);
-      assert.isNumber(packet["total_number_of_packets"]);
-      assert.isString(packet["data"]);
+      assert.isString(packet["transaction_id"], "transaction_id");
+      assert.isNumber(packet["packet_index"], "packet_index");
+      assert.isNumber(packet["total_number_of_packets"], "totoal_number_of_packets");
+      assert.isString(packet["data"], "data");
     });
   });
   
   describe('#parsePacket()', function() {
     it('should create a new Packet', function() {
-      packet = index.parsePacket('1,2,3,data');
+      packet = index.parsePacket('1,2,3,aGVsbG8=\n');
       assert.isObject(packet);
       assert.equal(packet["transaction_id"], 1);
       assert.equal(packet["packet_index"], 2);
       assert.equal(packet["total_number_of_packets"], 3);
-      assert.equal(packet["data"], "data");
+      assert.equal(packet["data"], "aGVsbG8=\n");
     })
   });
   
@@ -95,7 +96,7 @@ describe('heliumlft', function() {
       eventData = fake_event_data();
       datastore = fake_datastore();
       key = index.getKeyFromEventData(datastore, eventData);
-      assert(key, "1-2")
+      assert.equal(key, "lft-event-1-2")
     });
   });
   
@@ -110,17 +111,19 @@ describe('heliumlft', function() {
   });
   
   describe('#assembleBlobFromDatastore', function() {
-    it('should create a whole piece of data from multiple obejcts', function() {
+    it('should create a whole piece of data from multiple obejcts', function(done) {
       datastore = fake_datastore();
       datastore.runQuery = function(query) {
         return new Promise(function(resolve, reject) {
-          resolve([[{"data": "hello "}, {"data": "world"}], {"moreResults": "", "endCursor": ""}]);
+          resolve([[{"data": "aGVsbG8g\n"}, {"data": "d29ybGQ=\n"}], {"moreResults": "", "endCursor": ""}]);
         })
       };
       
       index.assembleBlobFromDatastore(datastore, "bogus", function(err, message){
         assert.equal(err, null);
-        assert.equal("hello world", message);
+        assert.equal("hello world", message.toString('ascii'));
+        // will never be called if assert fails
+        done();
       })
     })
   });
