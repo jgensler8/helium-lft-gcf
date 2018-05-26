@@ -5,11 +5,17 @@ const googleauth = require('google-auth-library');
 const buffer = require('buffer');
 const fs = require('fs');
 
+const configuration = fs.readFileSync('./configuration.json', 'utf-8');
+const CLOUD_REGION = configuration["CLOUD_REGION"];
+const REGISTRY_ID = configuration["REGISTRY_ID"];
+const DEVICE_ID = configuration["DEVICE_ID"];
+
 const kind = "lft-event";
 exports.CHECKPOINT_KEY = "checkpoint";
 exports.DELTA_KEY = "delta";
 // This is in seconds
 exports.DELTA = 120.1;
+exports.SERVICE_ACCOUNT_FILE = 'service-account.json';
 
 const datastore = new Datastore();
 
@@ -32,22 +38,17 @@ exports.modifyDeviceConfig = function(client, project_id, cloud_region, registry
 }
 
 exports.getGoogleIoTClient = function(cb) {
-  googleauth.auth.getClient({
-    scopes: 'https://www.googleapis.com/auth/cloud-platform'
-  })
-  .then(function(client){
-    // set the global options to use this for auth
-    google.options({
-      auth: client
-    });
-
-    // create the iot client
-    iotclient = new cloudiot_v1.Cloudiot({}, google);
-    cb(null, iotclient, client.projectId);
-  })
-  .catch(function(err){
-    cb(err);
+  var credentials = JSON.parse(fs.readFileSync(exports.SERVICE_ACCOUNT_FILE));
+  var client = googleauth.auth.fromJSON(credentials);
+  client.scopes = ['https://www.googleapis.com/auth/cloud-platform']
+  // set the global options to use this for auth
+  google.options({
+    auth: client
   });
+
+  // create the iot client
+  var iotclient = new cloudiot_v1.Cloudiot({}, google);
+  cb(null, iotclient, client.projectId);
 }
 
 exports.generate_device_configuration = function() {
