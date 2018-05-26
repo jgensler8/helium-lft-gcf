@@ -1,12 +1,61 @@
 const Datastore = require('@google-cloud/datastore');
 const Storage = require('@google-cloud/storage');
+const {google, cloudiot_v1} = require('googleapis');
+const googleauth = require('google-auth-library');
 const buffer = require('buffer');
+const fs = require('fs');
 
 const kind = "lft-event";
+exports.CHECKPOINT_KEY = "checkpoint";
+exports.DELTA_KEY = "delta";
+// This is in seconds
+exports.DELTA = 120.1;
 
 const datastore = new Datastore();
 
 const gcs_bucket = Storage().bucket('mushroom-images');
+
+exports.modifyDeviceConfig = function(client, project_id, cloud_region, registry_id, device_id, device_configuration) {
+  const binaryData = Buffer.from(device_configuration).toString('base64');
+  const request = {
+    name: `projects/${project_id}/locations/${cloud_region}/registries/${registry_id}/devices/${device_id}`,
+    binaryData: binaryData
+  };
+
+  client.projects.locations.registries.devices.modifyCloudToDeviceConfig(request)
+  .then(function(data) {
+    console.log(data);
+  })
+  .catch(function(err) {
+    console.log(err);
+  })
+}
+
+exports.getGoogleIoTClient = function(cb) {
+  googleauth.auth.getClient({
+    scopes: 'https://www.googleapis.com/auth/cloud-platform'
+  })
+  .then(function(client){
+    // set the global options to use this for auth
+    google.options({
+      auth: client
+    });
+
+    // create the iot client
+    iotclient = new cloudiot_v1.Cloudiot({}, google);
+    cb(null, iotclient, client.projectId);
+  })
+  .catch(function(err){
+    cb(err);
+  });
+}
+
+exports.generate_device_configuration = function() {
+  device_configuration = {};
+  device_configuration[exports.CHECKPOINT_KEY] = Date.now() / 1000;
+  device_configuration[exports.DELTA_KEY] = exports.DELTA;
+  return device_configuration;
+}
 
 exports.newPacket = function(transaction_id, packet_index, total_number_of_packets, data) {
   return {

@@ -1,6 +1,6 @@
-var assert = require('chai').assert;
-var index = require('./index');
-var buffer = require('buffer');
+const assert = require('chai').assert;
+const index = require('./index');
+const buffer = require('buffer');
 
 function fake_packet(){
   return {
@@ -125,6 +125,17 @@ describe('heliumlft', function() {
         // will never be called if assert fails
         done();
       })
+    })
+  });
+  
+  describe('#generate_device_configuration', function() {
+    it('should return floats for both values', function() {
+      dc = index.generate_device_configuration();
+      assert.isObject(dc);
+      assert.isNumber(dc[index.CHECKPOINT_KEY]);
+      assert.isNumber(dc[index.DELTA_KEY]);
+      assert.include("" + dc[index.CHECKPOINT_KEY], ".")
+      assert.include("" + dc[index.DELTA_KEY], ".")
     })
   });
   

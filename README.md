@@ -2,6 +2,17 @@
 
 Helium Large File Transfer Google Cloud Functions and Library.
 
+## Create a Configuration File
+
+```
+$ cat ./configuration.json
+{
+  "CLOUD_REGION": "us-central1",
+  "REGISTRY_ID": "myregistry",
+  "DEVICE_ID": "Helium-1111111111111111"
+}
+```
+
 ## Uploading Pub/Sub Events to Datastore
 
 ```
