@@ -9,7 +9,8 @@ $ cat ./configuration.json
 {
   "CLOUD_REGION": "us-central1",
   "REGISTRY_ID": "myregistry",
-  "DEVICE_ID": "Helium-1111111111111111"
+  "DEVICE_ID": "Helium-1111111111111111",
+  "ASSEMBLE_TOPIC_NAME": "projects/xx/topics/xx"
 }
 ```
 

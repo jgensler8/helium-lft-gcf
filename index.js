@@ -10,7 +10,7 @@ const CLOUD_REGION = configuration["CLOUD_REGION"];
 const REGISTRY_ID = configuration["REGISTRY_ID"];
 const DEVICE_ID = configuration["DEVICE_ID"];
 
-const kind = "lft-event";
+exports.kind = "lft-event";
 exports.CHECKPOINT_KEY = "checkpoint";
 exports.DELTA_KEY = "delta";
 // This is in seconds
@@ -86,7 +86,7 @@ exports.parsePacket = function(packetString) {
 exports.getKeyFromEventData = function(datastore, eventData) {
   var b = new buffer.Buffer(eventData["data"], 'base64');
   packet = exports.parsePacket(b.toString('ascii'));
-  return datastore.key([kind, packet["transaction_id"] + "-" + packet["packet_index"] ])
+  return datastore.key([exports.kind, packet["transaction_id"] + "-" + packet["packet_index"] ])
 }
 
 exports.getPacketFromEventData = function(eventData) {
@@ -115,7 +115,7 @@ exports.storePacket = function(datastore, eventData, callback) {
 
 exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback) {
   const query = datastore
-    .createQuery(kind)
+    .createQuery(exports.kind)
     .filter('transaction_id', '=', transaction_id)
     .order('packet_index', {
       ascending: true,

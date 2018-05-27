@@ -1,19 +1,49 @@
 const index = require('./index');
 const http = require('http');
+const Datastore = require('@google-cloud/datastore');
+const PubSub = require('@google-cloud/pubsub');
 const port = 8080;
 
 const configuration = require('./configuration.json')
 const CLOUD_REGION = configuration["CLOUD_REGION"];
 const REGISTRY_ID = configuration["REGISTRY_ID"];
 const DEVICE_ID = configuration["DEVICE_ID"];
+const ASSEMBLE_TOPIC_NAME = configuration["ASSEMBLE_TOPIC_NAME"];
+
+const datastore = new Datastore();
+const pubsub = new PubSub();
 
 function cron_assemble() {
-  console.log("assembling packets");
-  // list images in directory
-  
-  // list unique transaction ids
-  
-  // assemble transactions ids that are not in images
+  console.log("Running Assemle Query");
+  query = datastore
+    .createQuery(index.kind)
+    .groupBy('transaction_id');
+  datastore.runQuery(query)
+    .then(function(entities) {
+      transaction_ids = [];
+      
+      entities[0].forEach(function(entity) {
+        transaction_ids.push(entity["transaction_id"]);
+      });
+      
+      transaction_ids.forEach(function(transaction_id) {
+        console.log("triggering assemble for transaction_id " + transaction_id)
+        pubsub
+          .topic(ASSEMBLE_TOPIC_NAME)
+          .publisher()
+          .publish(new Buffer("" + transaction_id))
+          .then(messageId => {
+            console.log(messageId);
+          })
+          .catch(err => {
+            console.log(err);
+          });
+      });
+      
+    })
+    .catch(function(err) {
+      console.log(err)
+    });
 };
 
 function cron_take_picture() {
