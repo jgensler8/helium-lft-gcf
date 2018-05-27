@@ -94,11 +94,6 @@ exports.getPacketFromEventData = function(eventData) {
   return exports.parsePacket(b.toString('ascii'));
 }
 
-exports.getTransactionIdFromEventData = function(eventData) {
-    var b = new buffer.Buffer(eventData["data"], 'base64');
-    return parseInt(b.toString('ascii'));
-}
-
 exports.storePacket = function(datastore, eventData, callback) {
   const entity = {
     key: exports.getKeyFromEventData(datastore, eventData),
@@ -164,7 +159,7 @@ exports.heliumlft_assemble = (event, callback) => {
   eventData = event["data"];
   console.log("EventData", eventData);
   
-  transaction_id = exports.getTransactionIdFromEventData(eventData);
+  transaction_id = exports.getPacketFromEventData(eventData)["transaction_id"];
   console.log("transaction_id", transaction_id);
   
   exports.assembleBlobFromDatastore(datastore, transaction_id, function(err, blob){

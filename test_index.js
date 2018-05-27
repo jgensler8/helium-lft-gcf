@@ -72,10 +72,10 @@ describe('heliumlft', function() {
     it('should create a new Packet', function() {
       packet = index.parsePacket('1,2,3,aGVsbG8=\n');
       assert.isObject(packet);
-      assert.equal(packet["transaction_id"], 1);
-      assert.equal(packet["packet_index"], 2);
-      assert.equal(packet["total_number_of_packets"], 3);
-      assert.equal(packet["data"], "aGVsbG8=\n");
+      assert.deepEqual(packet["transaction_id"], '1');
+      assert.deepEqual(packet["packet_index"], 2);
+      assert.deepEqual(packet["total_number_of_packets"], 3);
+      assert.deepEqual(packet["data"], "aGVsbG8=\n");
     })
   });
   
@@ -106,7 +106,7 @@ describe('heliumlft', function() {
       datastore = fake_datastore();
       index.storePacket(datastore, eventData);
       packet = datastore.get(index.getKeyFromEventData(datastore, eventData));
-      assert.equal(packet["transaction_id"], 1);
+      assert.deepEqual(packet["transaction_id"], '1');
     })
   });
   
