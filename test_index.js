@@ -17,16 +17,20 @@ function fake_event() {
     "timestamp": "",
     "eventType": "",
     "resource": "",
-    "data": fake_event_data()
+    "data": fake_upload_event_data()
   };
 };
 
-function fake_event_data() {
+function fake_upload_event_data() {
   return {
     "@type": "",
     "attributes": [],
     "data": "MSwyLDMsYUdWc2JHOD0K"
   };
+};
+
+function fake_assemble_event_data() {
+  return "1234";
 };
 
 function fake_datastore() {
@@ -79,10 +83,10 @@ describe('heliumlft', function() {
     })
   });
   
-  describe('#getPacketFromEventData', function(){
+  describe('#getPacketFromUploadEventData', function(){
     it('should return the fake packet data', function() {
-      eventData = fake_event_data();
-      packet = index.getPacketFromEventData(eventData);
+      eventData = fake_upload_event_data();
+      packet = index.getPacketFromUploadEventData(eventData);
       correct_packet = fake_packet();
       assert.equal(packet["transaction_id"], correct_packet["transaction_id"]);
       assert.equal(packet["packet_index"], correct_packet["packet_index"]);
@@ -91,21 +95,28 @@ describe('heliumlft', function() {
     })
   })
   
-  describe('#getKeyFromEventData', function() {
+  describe('#getTransactionIdFromAssembleEventData', function() {
+    it('should return a string', function() {
+      eventData = fake_assemble_event_data();
+      assert.isString(eventData);
+    });
+  })
+  
+  describe('#getKeyFromUploadEventData', function() {
     it('should return the key for a new PubSub Event', function() {
-      eventData = fake_event_data();
+      eventData = fake_upload_event_data();
       datastore = fake_datastore();
-      key = index.getKeyFromEventData(datastore, eventData);
+      key = index.getKeyFromUploadEventData(datastore, eventData);
       assert.equal(key, "lft-event-1-2")
     });
   });
   
   describe('#storeEventData', function() {
     it('should return the same data when we call get', function() {
-      eventData = fake_event_data();
+      eventData = fake_upload_event_data();
       datastore = fake_datastore();
       index.storePacket(datastore, eventData);
-      packet = datastore.get(index.getKeyFromEventData(datastore, eventData));
+      packet = datastore.get(index.getKeyFromUploadEventData(datastore, eventData));
       assert.deepEqual(packet["transaction_id"], '1');
     })
   });
