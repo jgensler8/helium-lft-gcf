@@ -1,6 +1,6 @@
 cron:
 - description: "assemble"
-  url: /cron/assmble
+  url: /cron/assemble
   schedule: every 6 hours synchronized
 - description: "take-picture"
   url: /cron/take-picture
