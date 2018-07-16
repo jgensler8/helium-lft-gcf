@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha ./test_index.js",
+    "test": "./node_modules/mocha/bin/mocha --grep @integration --invert ./test_index.js",
+    "test_integration": "./node_modules/mocha/bin/mocha --grep @integration ./test_index.js",
     "test_function": "functions call heliumlft-upload --data='1,1,1,world'",
     "deploy": "functions deploy heliumlft-upload --event-type cloud.pubsub",
     "production_upload": "gcloud functions deploy heliumlft-upload --trigger-topic heliumlft-upload --entry-point heliumlft_upload --stage-bucket vo-fx",
@@ -13,6 +14,7 @@
     "production_index": "gcloud datastore create-indexes index.yaml",
     "production_assemble": "gcloud functions deploy heliumlft-assemble --trigger-topic heliumlft-assemble --entry-point heliumlft_assemble --stage-bucket vo-fx",
     "production_assemble_message": "gcloud alpha pubsub topics publish heliumlft-assemble --message='1'",
+    "production_detect": "gcloud functions deploy heliumlft-detect --trigger-bucket your-bucket --entry-point heliumlft_detect --stage-bucket vo-fx",
     "production_gae": "gcloud app deploy ./app.yaml",
     "start": "node cron.js",
     "production_cron": "gcloud app deploy ./cron.yaml"

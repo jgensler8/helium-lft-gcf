@@ -1,22 +1,21 @@
 const Datastore = require('@google-cloud/datastore');
 const Storage = require('@google-cloud/storage');
-const {google, cloudiot_v1} = require('googleapis');
+const {google, cloudiot_v1, ml_v1} = require('googleapis');
 const googleauth = require('google-auth-library');
 const buffer = require('buffer');
 const fs = require('fs');
 
-const configuration = fs.readFileSync('./configuration.json', 'utf-8');
-const CLOUD_REGION = configuration["CLOUD_REGION"];
-const REGISTRY_ID = configuration["REGISTRY_ID"];
-const DEVICE_ID = configuration["DEVICE_ID"];
+const SERVICE_ACCOUNT_FILE = require('./service-account.json');
+const CONFIGURATION = require('./configuration.json');
+const ML_MODEL_RESOURCE = CONFIGURATION["ML_MODEL_RESOURCE"];
+const DETECTION_SCORE_THRESHOLD = CONFIGURATION["DETECTION_SCORE_THRESHOLD"]
 
-exports.kind = "lft-event";
+exports.lft_event_kind = "lft-event";
+exports.qualified_object_kind = "qualified-object";
 exports.CHECKPOINT_KEY = "checkpoint";
 exports.DELTA_KEY = "delta";
 // This is in seconds
 exports.DELTA = 120.1;
-exports.SERVICE_ACCOUNT_FILE = 'service-account.json';
-
 const datastore = new Datastore();
 
 const gcs_bucket = Storage().bucket('mushroom-images');
@@ -38,7 +37,7 @@ exports.modifyDeviceConfig = function(client, project_id, cloud_region, registry
 };
 
 exports.getGoogleIoTClient = function(cb) {
-  var credentials = JSON.parse(fs.readFileSync(exports.SERVICE_ACCOUNT_FILE));
+  var credentials = SERVICE_ACCOUNT_FILE;
   var client = googleauth.auth.fromJSON(credentials);
   client.scopes = ['https://www.googleapis.com/auth/cloud-platform']
   // set the global options to use this for auth
@@ -49,6 +48,20 @@ exports.getGoogleIoTClient = function(cb) {
   // create the iot client
   var iotclient = new cloudiot_v1.Cloudiot({}, google);
   cb(null, iotclient, client.projectId);
+};
+
+exports.getCloudMLClient = function(cb) {
+  var credentials = SERVICE_ACCOUNT_FILE;
+  var client = googleauth.auth.fromJSON(credentials);
+  client.scopes = ['https://www.googleapis.com/auth/cloud-platform']
+  // set the global options to use this for auth
+  google.options({
+    auth: client
+  });
+
+  // create the cloud ml client
+  var mlclient = new ml_v1.Ml({}, google);
+  cb(null, mlclient, client.projectId);
 };
 
 exports.generate_device_configuration = function() {
@@ -86,7 +99,7 @@ exports.parsePacket = function(packetString) {
 exports.getKeyFromUploadEventData = function(datastore, eventData) {
   var b = new buffer.Buffer(eventData["data"], 'base64');
   packet = exports.parsePacket(b.toString('ascii'));
-  return datastore.key([exports.kind, packet["transaction_id"] + "-" + packet["packet_index"] ])
+  return datastore.key([exports.lft_event_kind, packet["transaction_id"] + "-" + packet["packet_index"] ])
 };
 
 exports.getPacketFromUploadEventData = function(eventData) {
@@ -115,7 +128,7 @@ exports.storePacket = function(datastore, eventData, callback) {
 
 exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback) {
   const query = datastore
-    .createQuery(exports.kind)
+    .createQuery(exports.lft_event_kind)
     .filter('transaction_id', '=', transaction_id)
     .order('packet_index', {
       ascending: true,
@@ -139,6 +152,100 @@ exports.assembleBlobFromDatastore = function(datastore, transaction_id, callback
   }).catch(err => {
     console.log(err)
     callback(err)
+  });
+};
+
+exports.getKeyFromQualifiedObject = function(datastore, qualified_object) {
+  return datastore.key([exports.qualified_object_kind, qualified_object.center.x + "-" + qualified_object.center.y]);
+};
+
+exports.store_qualified_object = function(datastore, qualified_object, callback) {
+  const entity = {
+    key: exports.getKeyFromQualifiedObject(datastore, qualified_object),
+    data: qualified_object
+  };
+
+  datastore.save(
+    entity,
+    (err) => {
+      callback(err)
+    }
+  );
+};
+
+exports.get_qualified_objects_from_detections = function(detection_boxes, detection_scores){
+  var objects = []
+  detection_scores.forEach(function(score, score_index){
+    if(score > DETECTION_SCORE_THRESHOLD) {
+      object_box = detection_boxes[score_index];
+      x_min = object_box[0];
+      x_max = object_box[1];
+      y_min = object_box[2];
+      y_max = object_box[3];
+
+      length = x_max - x_min;
+      height = y_max - y_min;
+
+      area = height * length;
+      center = {
+        "x": x_min + (length / 2),
+        "y": y_min + (height / 2)
+      }
+      objects.push({
+        "area": area,
+        "center": center
+      })
+    }
+  });
+  return objects;
+};
+
+exports.detect_objects = function(bucket, file, callback) {
+  exports.getCloudMLClient(function(err, client, project_id) {
+    if(err != null) {
+      console.log("Failed to create Cloud ML Client");
+      callback(err)
+    }
+
+    // get image from datastore
+    gcs_bucket.file(file).download().then(function(file){
+      // for some reason, this returns an array of files
+      b64file = file[0].toString('base64');
+      b64file = b64file.replace(/\+/g, '-').replace(/\//g, '_');
+
+      // get bounding boxes
+      client.projects.predict({
+        "name": ML_MODEL_RESOURCE,
+        "resource": {
+          "instances": [
+            {
+              "inputs": b64file
+            }
+          ]
+        }
+      })
+      .then(function(response){
+        prediction_result = response.data.predictions[0];
+
+        detection_boxes = prediction_result["detection_boxes"];
+        detection_scores = prediction_result["detection_scores"];
+
+        qualified_objects = exports.get_qualified_objects_from_detections(detection_boxes, detection_scores);
+
+        console.log("Qualified objects")
+        console.log(qualified_objects)
+
+        qualified_objects.forEach(function(qualified_object) {
+          exports.store_qualified_object(datastore, qualified_object, function(err){
+            if(err != null){
+              console.log(err);
+            }
+          })
+        })
+
+      })
+      .catch(callback)
+    })
   });
 };
 
@@ -173,4 +280,12 @@ exports.heliumlft_assemble = (event, callback) => {
     }
     callback(err);
   });
+};
+
+exports.heliumlft_detect = (event, callback) => {
+  const file = event.data;
+  const file_bucket = file.bucket;
+  const file_name = file.name;
+
+  exports.detect_objects(file_bucket, file_name);
 };

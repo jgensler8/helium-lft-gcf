@@ -10,7 +10,9 @@ $ cat ./configuration.json
   "CLOUD_REGION": "us-central1",
   "REGISTRY_ID": "myregistry",
   "DEVICE_ID": "Helium-1111111111111111",
-  "ASSEMBLE_TOPIC_NAME": "projects/xx/topics/xx"
+  "ASSEMBLE_TOPIC_NAME": "projects/xx/topics/xx",
+  "ML_MODEL_RESOURCE": "projects/xx/models/xx/versions/xx",
+  "DETECTION_SCORE_THRESHOLD": 0.5
 }
 ```
 

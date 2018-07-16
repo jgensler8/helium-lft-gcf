@@ -4,7 +4,7 @@ const Datastore = require('@google-cloud/datastore');
 const PubSub = require('@google-cloud/pubsub');
 const port = 8080;
 
-const configuration = require('./configuration.json')
+const configuration = require('./configuration.json');
 const CLOUD_REGION = configuration["CLOUD_REGION"];
 const REGISTRY_ID = configuration["REGISTRY_ID"];
 const DEVICE_ID = configuration["DEVICE_ID"];

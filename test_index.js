@@ -58,6 +58,18 @@ function fake_datastore() {
   }
 }
 
+function fake_detection_boxes(){
+  return [[0.24290436506271362, 0.34011751413345337, 0.3496599793434143, 0.4212002158164978]];
+};
+
+function fake_high_detection_scores() {
+  return [.9];
+};
+
+function fake_low_detection_scores(){ 
+  return [0];
+}
+
 describe('heliumlft', function() {
   
   describe('#newPacket()', function() {
@@ -152,6 +164,39 @@ describe('heliumlft', function() {
   
   describe('#assembleBlobFromDatastore @integration', function() {
     
+  })
+
+  describe('#get_qualified_objects_from_detections', function(){
+    it('should return one objects when given one bounding box and high score', function(){
+      objects = index.get_qualified_objects_from_detections(fake_detection_boxes(), fake_high_detection_scores())
+      assert.isArray(objects)
+      assert.equal(objects.length, 1)
+      
+      o = objects[0];
+      assert.hasAllKeys(o, ["center", "area"])
+      assert.isNumber(o["center"])
+      assert.isNumber(o["area"])
+    });
+
+    it('should return no objects when score is too low', function(){
+      objects = index.get_qualified_objects_from_detections(fake_detection_boxes(), fake_low_detection_scores());
+      assert.isArray(objects)
+      assert.isEmpty(objects)
+    });
+  });
+
+  describe('#detect_objects @integration', function(){
+    it('should return four objects', function(done) {
+      this.timeout(8000);
+
+      index.detect_objects("", "1527937205.jpeg", function(err) {
+        if(err != null) {
+          console.log(err)
+          assert.fail()
+        }
+        done();
+      })
+    })
   })
   
 });
